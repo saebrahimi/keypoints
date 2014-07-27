@@ -151,8 +151,10 @@ end
 require 'dp'
 
 cmd = torch.CmdLine()
+cmd:text('th csv2torch.lua --csvfile ~/data/FacialKeypoints/training.csv --th7file ~/data/FacialKeypoints/train.th7 --train')
 cmd:option('--csvfile', '', 'location of the csv file')
 cmd:option('--th7file', '', 'location of the th7 file')
+cmd:option('--train', false, 'training set includes target keypoints')
 cmd:text()
 opt = cmd:parse(arg or {})
 
@@ -160,18 +162,32 @@ csvg, header, rheader = csv.open_with_header(opt.csvfile)
 
 local data = {}
 
-local line
-while line do
-   line = csvg()
-   local row = {}
-   local row = _.map(_.split(line[2], ' '), function(k,v) 
-      return tonumber(v) 
-   end)
-   table.insert(row, tonumber(line[1]), 1)
-   table.insert(data, torch.FloatTensor(row))
+local line = csvg()
+if opt.train then
+   while line do
+      local row = {}
+      local row = _.map(_.split(line[31], ' '), function(k,v) 
+         return tonumber(v) 
+      end)
+      for i=1,30 do
+         table.insert(row, i, tonumber(line[i]) or -1)
+      end
+      table.insert(data, torch.FloatTensor(row))
+      line = csvg()
+   end
+else
+   while line do
+      local row = {}
+      local row = _.map(_.split(line[2], ' '), function(k,v) 
+         return tonumber(v) 
+      end)
+      table.insert(row, 1, tonumber(line[1]))
+      table.insert(data, torch.FloatTensor(row))
+      line = csvg()
+   end
 end
 
-local tensor = torch.FloatTensor(#ids, #keypoints[1] + 1)
+local tensor = torch.FloatTensor(#data, data[1]:size(1))
 
 for i,row in ipairs(data) do
    tensor[i]:copy(row)
